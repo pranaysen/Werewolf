@@ -1,0 +1,194 @@
+<?php
+
+        session_start();
+        
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<script src="jquery-3.3.1.min.js"> </script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+form {
+    border: 3px solid #f1f1f1;
+    background-color: #c3c6cc;
+}
+
+input[type=text], input[type=number] {
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #6d6f72;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+button:hover {
+    opacity: 0.8;
+}
+
+.imgcontainer {
+    text-align: center;
+    margin: 24px 0 12px 0;
+}
+
+img.avatar {
+    width: 20%;
+}
+
+.container {
+    padding: 16px;
+}
+
+span.psw {
+    float: right;
+    padding-top: 16px;
+}
+
+/* Change styles for span and cancel button on extra small screens */
+@media screen and (max-width: 300px) {
+    span.psw {
+       display: block;
+       float: none;
+    }
+    .cancelbtn {
+       width: 100%;
+    }
+}
+</style>
+</head>
+<body>
+
+<h2> Werewolf Game Creator</h2>
+
+<form>
+  <div class="imgcontainer">
+  <!--
+    <img src="bellarmine.png" alt="Avatar" class="avatar"> -->
+  </div>
+
+  <div class="container">
+	<center> <b id="status"> </b> </center>
+	<br>
+    <b> Total Number of People </b>
+    <input type="number" placeholder="Number of People" id="total" name="usr" value="0" required readonly>
+  <div>
+    <label for="villager"><b>Villager</b></label>
+    <input type="number" onchange="updateTotal()" id="villager" name="usr" value="0" min="0" required>
+  </div>
+  <div>
+    <label for="werewolf"><b>Werewolf</b></label>
+    <input type="number" onchange="updateTotal()" id="werewolf" name="usr" value="0" min="0" required>
+  </div>
+  <div>
+    <label for="doctor"><b>Doctor</b></label>
+    <input type="number" onchange="updateTotal()" id="doctor" name="usr" value="0" min="0" required>
+  </div>
+  <div>
+    <label for="seer"><b>Seer</b></label>
+    <input type="number" onchange="updateTotal()" id="seer" name="usr" value="0" min="0" required>
+  </div>
+  <div>
+    <label for="monkey"><b>Monkey</b></label>
+    <input type="number" onchange="updateTotal()" id="monkey" name="usr" value="0" min="0" required>
+  </div>
+    <button type="submit" onclick="return createGame()">Create</button>
+  </div>
+</form>
+
+<script type="text/javascript">
+	var ip = "";
+	var httpport = "";
+	var wsport = "";
+	var connection;
+	
+	function getConf() {
+		return jQuery.getJSON( "conf.json")
+			.then(function (json) {
+				return {
+					ip: json.ip,
+					httpport: json.httpport,
+					wsport: json.wsport
+				}
+			})
+	};
+	
+	getConf().then(function(returndata){
+		ip = returndata.ip;
+		httpport = returndata.httpport;
+		wsport = returndata.wsport;
+		
+		console.log("ws://" + returndata.ip + ":" + returndata.wsport);
+		
+		connection = new WebSocket(("ws://" + ip + ":" + wsport));
+		connection.onopen = function () {
+			console.log("Connected.");
+		};
+
+		connection.onmessage = function (message) {
+			var args = message.data.split(" ");
+			console.log(args);
+
+			if (args[0] == "createaccept") {
+				var status = document.getElementById("status");
+				var url = ip + ":" + httpport + "/join.html?id=" + args[1];
+				status.innerHTML = "Game created! Url: " + url;
+				status.style.color = "green";
+			} else
+
+			if (args[0] == "createdeny") {
+				var status = document.getElementById("status");
+				status.innerHTML = "An unkown error has occurred";
+				status.style.color = "red";
+			}
+		};
+	});
+
+    function updateTotal() {
+        var villager = document.getElementById("villager").value;
+        var werewolf = document.getElementById("werewolf").value;
+        var doctor = document.getElementById("doctor").value;
+        var seer = document.getElementById("seer").value;
+        var monkey = document.getElementById("monkey").value;
+        var total = parseInt(villager) + parseInt(werewolf) + parseInt(doctor) + parseInt(seer) + parseInt(monkey);
+        var totalDoc = document.getElementById("total");
+        totalDoc.value = total;
+        return false;
+    }
+    
+    function createGame() {
+        var gameParameters = "creategame ";
+        gameParameters += document.getElementById("villager").value;
+        gameParameters += " ";
+        gameParameters += document.getElementById("monkey").value;
+        gameParameters += " ";
+        gameParameters += document.getElementById("seer").value;
+        gameParameters += " ";
+        gameParameters += document.getElementById("werewolf").value;
+        gameParameters += " ";
+        gameParameters += document.getElementById("doctor").value;
+        gameParameters += " ";
+        gameParameters += document.getElementById("total").value;
+        gameParameters += "\n";
+        connection.send(gameParameters);
+
+		var status = document.getElementById("status");
+        return false;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<?php
+
+        session_start();
+        
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+form {
+    border: 3px solid #f1f1f1;
+    background-color: #c3c6cc;
+}
+
+input[type=text], input[type=number] {
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #6d6f72;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+button:hover {
+    opacity: 0.8;
+}
+
+.imgcontainer {
+    text-align: center;
+    margin: 24px 0 12px 0;
+}
+
+img.avatar {
+    width: 20%;
+}
+
+.container {
+    padding: 16px;
+}
+
+span.psw {
+    float: right;
+    padding-top: 16px;
+}
+
+/* Change styles for span and cancel button on extra small screens */
+@media screen and (max-width: 300px) {
+    span.psw {
+       display: block;
+       float: none;
+    }
+    .cancelbtn {
+       width: 100%;
+    }
+}
+</style>
+</head>
+<body>
+
+<h2>Werewolf</h2>
+
+<form method="post">
+  <div class="imgcontainer">
+  <!--
+    <img src="bellarmine.png" alt="Avatar" class="avatar"> -->
+  </div>
+  <div class="container">
+    <center> <b id="status"> </b> </center>
+	<br>
+    <b> Join a Game </b>
+    <input type="text" placeholder="Name (alphanumeric)" id="username" name="usr" pattern="^[A-Za-z0-9]*$" enabled=true required>
+    <button type="submit" onclick="return verify()">Join</button>
+  </div>
+</form>
+
+<script>
+    var connection = new WebSocket('ws://192.168.1.115:8001');
+	var id = getQueryVariable("id");
+
+    connection.onopen = function () {
+        console.log("Connected.");
+    };
+
+	connection.onmessage = function (message) {
+		var args = message.data.split(" ");
+
+		if (args[0] == "verifyaccept") {
+			var name = document.getElementById("username").value;
+			window.location.replace("play.html?id=" + id + "&name=" + name + "\n");
+		} else
+		
+		if (args[0] == "verifydeny") {
+			var status = document.getElementById("status");
+			status.innerHTML = args.slice(1, args.length).join(" ");
+			status.style.color = "red";
+			document.getElementById("username").value;
+		}
+	};
+
+	function getQueryVariable(variable) {
+		var query = window.location.search.substring(1);
+		var vars = query.split("&");
+		for (var i=0;i<vars.length;i++) {
+			var pair = vars[i].split("=");
+			if (pair[0] == variable) {
+				return pair[1];
+			}
+		} 
+	}
+
+    function verify() {
+        var message = "verify " + id + " " + document.getElementById("username").value;
+        connection.send(message);
+        return false;
+    }
+
+</script>
+</body>
+</html>
