@@ -177,6 +177,7 @@ class Game:
         self.players = []
         self.lock_game = False
         self.game_state = 0
+        self.masterviews = []
 
     async def add_player(self, player):
         self.players.append(player)
@@ -206,6 +207,22 @@ class Game:
             if (not player_id == recipient.player_id):
                 await recipient.websocket.send(message)
 
+        for recipient in self.masterviews:
+            await recipient.websocket.send(message)
+
+    async def updateMasterviews(self):
+        formattedAlive = ';'.join(sorted(player.name for player in self.players if player.status == "alive"))
+        formattedDead = ';'.join(sorted(player.name for player in self.players if player.status == "dead"))
+        if (formattedAlive == ""):
+            formattedAlive = "_"
+        if (formattedDead == ""):
+            formattedDead = "_"
+
+        print("why")
+        for recipient in self.masterviews:
+            print("test")
+            await recipient.websocket.send("statusupdate " + formattedAlive + " " + formattedDead)
+
     def get_ids(self):
         try:
             ids = []
@@ -228,6 +245,8 @@ class Game:
         if (self.game_state == 1): # assigning roles
             await self.assign_roles()
             self.game_state = 2
+
+            await self.updateMasterviews()
 
         elif (self.game_state == 2): # nighttime prep
             await self.broadcast(Player("null", "null", "null"), "timer 30 seconds till Daytime")
@@ -270,6 +289,8 @@ class Game:
                 self.time0 = time.time()
                 self.game_state = 5
 
+            await self.updateMasterviews()
+
         elif (self.game_state == 5): # daytime
             if (time.time() - self.time0 > 90):
                 self.game_state = 6
@@ -294,7 +315,9 @@ class Game:
             for player in self.players:
                 if (not player.move[3] == ""):
                     print("registered one vote for " + player.move[3])
+                    player.move = ["", "", "", ""]
                     votes[contestants.index(player.move[3])] += 1
+                    
             sorted_votes = votes
             sorted_votes.sort(reverse = True)
             if (len(sorted_votes) != 1 and sorted_votes[0] == sorted_votes[1]):
@@ -314,6 +337,8 @@ class Game:
                 self.game_state = 9
             else:
                 self.game_state = 2
+
+            await self.updateMasterviews()
 
         elif (self.game_state == 9): # game end
             for player in players:
@@ -340,18 +365,18 @@ class Game:
             cursor += datum
             current_role += 1
 
+    async def add_masterview(self, masterview):
+        self.masterviews.append(masterview)
+        
+
 
 
 
 
 async def check_for_win(game):
-    print("yeah")
     players = [static_role_classes[player.role].class_type for player in game.players if player.status == "alive"]
-    print("yeah2")
     numInnocent = players.count("innocent")
-    print("yeah3")
     numKiller = players.count("killer")
-    print("yeah4")
     
     if (numKiller > numInnocent):
         return "Killers"
@@ -385,11 +410,23 @@ async def on_connection(websocket, path):
 
         if (args[0] == "buttonclick"):
             games[args[1]].get_player(args[2]).move = args
+
+        if (args[0] == "masterjoin"):
+            await master_join(args, websocket)
+
+
+
+
+async def master_join(args, websocket):
+    if (args[1] in games):
+        player_id = list(itertools.islice(gen_id(games[args[1]].get_ids(), 8), 1))[0]
+        await games[args[1]].add_masterview(Player(args[2], player_id, websocket))
         
+    
 
 
 
-
+   
 async def register_move(args):
     player = games[args[1]].get_player(args[2])
     static_role_classes(player.id).register_move(self, this, player, player.move[3])

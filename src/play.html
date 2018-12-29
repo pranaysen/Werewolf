@@ -92,14 +92,10 @@ span.psw {
 </head>
 <body>
 
-<h2> Werewolf</h2>
+<h2>Werewolf</h2>
 
 <div id="chatbox">
  <center> <b> <p id = "status"> </p> </b> </center>
-  <div class="imgcontainer">
-  <!--
-    <img src="bellarmine.png" alt="Avatar" class="avatar"> -->
-  </div>
 
   <div class="container">
     <b> <center> <p id="gamestate"> </p> </center> </b>
@@ -287,12 +283,8 @@ span.psw {
 
 			var textarea = document.getElementById('textbox');
 			textarea.scrollTop = textarea.scrollHeight;
-        } else {
-			// commands
-            var text = document.getElementById("groupid");
-            connection.send(document.getElementById("groupid").value);
-            text.value = "";
-        } 
+        }
+		
         return false;
     }
 

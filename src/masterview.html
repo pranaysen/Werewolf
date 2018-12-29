@@ -1,0 +1,199 @@
+<?php
+
+        session_start();
+        
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    font-family: Arial, Helvetica, sans-serif;
+	font-size: 150%
+}
+
+input[type=text], input[type=number], p {
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #6d6f72;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+button:hover {
+    opacity: 0.8;
+}
+
+.container {
+    padding: 16px;
+    border: 3px solid #f1f1f1;
+    background-color: #c3c6cc;
+}
+
+span.psw {
+    float: right;
+    padding-top: 16px;
+}
+
+/* Change styles for span and cancel button on extra small screens */
+@media screen and (max-width: 300px) {
+    span.psw {
+       display: block;
+       float: none;
+    }
+    .cancelbtn {
+       width: 100%;
+    }
+}
+
+.playername {
+	border: 6px solid #f1f1f1;
+	background-color: #f1f1f1;
+}
+
+.playerstatus {
+	text-align: center;
+	background-color: green;
+	color: #f1f1f1;
+}
+
+.playercontainer {
+	table-layout: fixed;
+}
+
+</style>
+</head>
+<body>
+
+<center> <h2>Werewolf Masterview</h2> </center>
+
+<div class="container">
+	<b> <center> <p id="gamestate"> test </p> </center> </b>
+	<table class="playercontainer" id="players" width="100%">
+		<col style="width:74%">
+		<col style="width:2%">
+		<col style="width:24%">
+		<tr>
+			<td class="playername"> a </td>
+			<td class="playerbuffer"> </td>
+			<td class="playerstatus"> Alive </td>
+		</tr>
+	</table>
+</div>
+
+<script>
+	var name = getQueryVariable("name");
+	var id = getQueryVariable("id");
+	var player_id;
+    var connection = new WebSocket('ws://192.168.1.115:8001');
+    var chatEnabled = 1;
+    
+    connection.onopen = function() {
+        console.log("Connected.");
+        var message = "masterjoin ";
+        message += id;
+        message += " ";
+        message += name;
+        connection.send(message);
+    };
+
+	connection.onmessage = function (message) {
+		console.log(message.data);
+		parseMessage(message.data);
+    };
+
+	function addPerson(unformattedName, status) {
+		if (unformattedName == "_") return;
+		
+		name = unformattedName.replace(/\//g, " ")
+		console.log(name);
+		console.log(status);
+		var table = document.getElementById("players");
+		var row = table.insertRow(table.rows.length);
+		var nameCell = row.insertCell(0);
+		nameCell.innerHTML = name;
+		nameCell.className = "playername";
+		nameCell.style.width = "74%";
+		var bufferCell = row.insertCell(1);
+		bufferCell.className = "playerbuffer";
+		bufferCell.style.width = "2%";
+		var statusCell = row.insertCell(2);
+		statusCell.innerHTML = status;
+		statusCell.className = "playerstatus";
+		statusCell.style.width = "24%";
+		
+		if (status == "Alive") {
+			statusCell.style.backgroundColor = "green";
+		} 
+		
+		else if (status == "Dead") {
+			statusCell.style.backgroundColor = "red"
+		}
+	}
+	
+	function parseMessage(message) {
+        var args = message.split(" ");
+
+		switch (args[0]) {
+			case "joinaccept":
+				player_id = args[1];
+				break;
+			case "gamestate":
+				setGameState(args);
+				break;
+			case "statusupdate":
+				updatePlayers(args);
+				break;
+		}
+	}
+	
+	function updatePlayers(args) {
+		aliveArray = args[1].split(";");
+		deadArray = args[2].split(";");
+		
+		var table = document.getElementById("players");
+		while (table.hasChildNodes()) {
+			table.removeChild(table.firstChild);
+		}
+		
+		for (var i = 0; i < aliveArray.length; i++) {
+			addPerson(aliveArray[i], "Alive");
+		}
+		
+		for (var i = 0; i < deadArray.length; i++) {
+			addPerson(deadArray[i], "Dead");
+		}
+	}
+
+	function setGameState(args) {
+		document.getElementById("gamestate").innerHTML = args.slice(1, args.length).join(" ");
+
+		var textarea = document.getElementById('textbox');
+		textarea.scrollTop = textarea.scrollHeight;
+	}
+
+	function getQueryVariable(variable) {
+		var query = window.location.search.substring(1);
+		var vars = query.split("&");
+		for (var i = 0; i < vars.length; i++) {
+			var pair = vars[i].split("=");
+			if (pair[0] == variable) {
+				return pair[1];
+			}
+		}
+	}
+
+</script>
+</body>
+</html>
