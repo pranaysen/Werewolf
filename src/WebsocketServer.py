@@ -1,6 +1,7 @@
 import asyncio
 import itertools
 import json
+import operator
 from random import shuffle
 from random import choices
 import sched
@@ -211,17 +212,24 @@ class Game:
             await recipient.websocket.send(message)
 
     async def updateMasterviews(self):
-        formattedAlive = ';'.join(sorted(player.name for player in self.players if player.status == "alive"))
-        formattedDead = ';'.join(sorted(player.name for player in self.players if player.status == "dead"))
+        print("ha")
+        sortedPlayers = sorted(self.players, key=lambda x: x.name, reverse=False)
+        print("ha")
+        formattedAlive = ';'.join(player.name for player in sortedPlayers if player.status == "alive")
+        print("ha")
+        formattedDead = ';'.join(player.name for player in sortedPlayers if player.status == "dead")
+        print("ha")
+        formattedRoles = ';'.join(roles[player.role] for player in sortedPlayers if player.status == "dead")
         if (formattedAlive == ""):
             formattedAlive = "_"
         if (formattedDead == ""):
             formattedDead = "_"
+            formattedRoles = "_"    
 
         print("why")
         for recipient in self.masterviews:
             print("test")
-            await recipient.websocket.send("statusupdate " + formattedAlive + " " + formattedDead)
+            await recipient.websocket.send("statusupdate " + formattedAlive + " " + formattedDead + " " + formattedRoles)
 
     def get_ids(self):
         try:

@@ -113,7 +113,7 @@ span.psw {
 		parseMessage(message.data);
     };
 
-	function addPerson(unformattedName, status) {
+	function addPerson(unformattedName, status, role) {
 		if (unformattedName == "_") return;
 		
 		name = unformattedName.replace(/\//g, " ")
@@ -139,6 +139,7 @@ span.psw {
 		
 		else if (status == "Dead") {
 			statusCell.style.backgroundColor = "red"
+			nameCell.innerHTML = name + " (" + role + ")";
 		}
 	}
 	
@@ -161,7 +162,7 @@ span.psw {
 	function updatePlayers(args) {
 		aliveArray = args[1].split(";");
 		deadArray = args[2].split(";");
-		
+		roleArray = args[3].split(";");
 		var table = document.getElementById("players");
 		while (table.hasChildNodes()) {
 			table.removeChild(table.firstChild);
@@ -172,7 +173,7 @@ span.psw {
 		}
 		
 		for (var i = 0; i < deadArray.length; i++) {
-			addPerson(deadArray[i], "Dead");
+			addPerson(deadArray[i], "Dead", roleArray[i]);
 		}
 	}
 
