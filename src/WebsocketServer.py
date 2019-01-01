@@ -153,7 +153,7 @@ class Monkey:
     async def register_move(self, game, target_player, button_pressed):
         roleguy = next((player for player in game.players if player.name == button_pressed), None)
         if roleguy is not None:
-            target_player.status = roleguy.status
+            target_player.role = roleguy.role
             await target_player.websocket.send("gamewhisper You are the " + roles[roleguy.role])
 
 
@@ -190,7 +190,11 @@ class Game:
             await self.broadcast(Player("null", "null", "null"), "status green Assigning Roles")
             self.game_state = 1
         else:
-            await self.broadcast(Player("null", "null", "null"), "status green " + str(playersLeft) + " players needed to start!")
+            if (playersLeft > 1):
+                await self.broadcast(Player("null", "null", "null"), "status green " + str(playersLeft) + " players needed to start!")
+            if (playersLeft == 1):
+                await self.broadcast(Player("null", "null", "null"), "status green 1 player needed to start!")
+                
             await self.broadcast(Player("null", "null", "null"), "gamestate Pre-Game Chat")
 
     def check_id_uniqueness(self, player_id):
@@ -206,6 +210,7 @@ class Game:
     async def broadcast(self, player_id, message):
         for recipient in self.players:
             if (not player_id == recipient.player_id):
+                recipient.websocket.recv()
                 await recipient.websocket.send(message)
 
         for recipient in self.masterviews:
@@ -257,7 +262,7 @@ class Game:
             await self.updateMasterviews()
 
         elif (self.game_state == 2): # nighttime prep
-            await self.broadcast(Player("null", "null", "null"), "timer 30 seconds till Daytime")
+            await self.broadcast(Player("null", "null", "null"), "timer 10 seconds till Daytime")
             await self.broadcast(Player("null", "null", "null"), "gamestate Nighttime")
             await self.nighttime_role_prep()
             self.time0 = time.time()
@@ -265,7 +270,7 @@ class Game:
             self.game_state = 3
             
         elif (self.game_state == 3): # nighttime
-            if (time.time() - self.time0 > 30):
+            if (time.time() - self.time0 > 10):
                 self.game_state = 4
 
         elif (self.game_state == 4): # daytime prep
@@ -291,7 +296,7 @@ class Game:
                 await self.broadcast(Player("null", "null", "null"), "gamechat " + "The " + result + " have won!")
                 self.game_state = 9
             else:
-                await self.broadcast(Player("null", "null", "null"), "timer 90 seconds till Voting Time")
+                await self.broadcast(Player("null", "null", "null"), "timer 5 seconds till Voting Time")
                 await self.broadcast(Player("null", "null", "null"), "gamestate Daytime")
                 await self.broadcast(Player("null", "null", "null"), "hidebuttons")
                 self.time0 = time.time()
@@ -300,11 +305,11 @@ class Game:
             await self.updateMasterviews()
 
         elif (self.game_state == 5): # daytime
-            if (time.time() - self.time0 > 90):
+            if (time.time() - self.time0 > 5):
                 self.game_state = 6
 
         elif (self.game_state == 6): # voting time prep
-            await self.broadcast(Player("null", "null", "null"), "timer 30 seconds of Voting Time")
+            await self.broadcast(Player("null", "null", "null"), "timer 5 seconds of Voting Time")
             await self.broadcast(Player("null", "null", "null"), "gamestate Voting Time")
             data = ';'.join(sorted([player.name for player in self.players if player.status == "alive"]))
             for player in self.players:
@@ -314,26 +319,34 @@ class Game:
             self.game_state = 7
 
         elif (self.game_state == 7): # voting time
-            if (time.time() - self.time0 > 30):
+            if (time.time() - self.time0 > 5):
                 self.game_state = 8
 
         elif (self.game_state == 8): # execution time
             contestants = [player.name for player in self.players if player.status == "alive"]
             votes = [0] * len(contestants)
+            print(votes)
             for player in self.players:
+                print(player.move[3])
                 if (not player.move[3] == ""):
                     print("registered one vote for " + player.move[3])
-                    player.move = ["", "", "", ""]
                     votes[contestants.index(player.move[3])] += 1
-                    
-            sorted_votes = votes
+                    player.move = ["", "", "", ""]
+
+            print(votes)
+            sorted_votes = votes[:]
             sorted_votes.sort(reverse = True)
+            print(sorted_votes)
+            print(contestants)
             if (len(sorted_votes) != 1 and sorted_votes[0] == sorted_votes[1]):
                 await self.broadcast(Player("null", "null", "null"), "gamechat Tie vote! No one has died.")
             else:
                 deadguy = contestants[votes.index(sorted_votes[0])]
+                print("deadguy: " + deadguy)
                 for player in self.players:
+                    print(player.name)
                     if player.name == deadguy:
+                        print("yes")
                         await player.kill(self)
                         await self.broadcast(Player("null", "null", "null"), "gamechat " + deadguy + " has been voted guilty! They have died.")
             
@@ -503,15 +516,16 @@ async def game_tick():
             await games[game_id].update()
             
         await asyncio.sleep(1)
+        
 
 
 
-
-
+        
 start_server = websockets.serve(on_connection, '0.0.0.0', port)
 
 print("Server started on port " + str(port))
 
-task = asyncio.get_event_loop().create_task(game_tick())
+loop = asyncio.get_event_loop()
+task = loop.create_task(game_tick())
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
